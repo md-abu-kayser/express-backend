@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
-import { AnyZodObject, ZodError } from 'zod';
+import { ZodError } from 'zod';
 import { StatusCodes } from 'http-status-codes';
+import { AnyZodObject } from 'zod/v3';
 
 export const validate = (schema: AnyZodObject) => (req: Request, res: Response, next: NextFunction) => {
   try {
