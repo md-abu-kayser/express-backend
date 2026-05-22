@@ -1,3 +1,6 @@
-node_modules
-.env*
-dist
+node_modules/
+dist/
+coverage/
+.env
+*.log
+prisma/migrations/
