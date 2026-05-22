@@ -1,14 +1,13 @@
-import { prisma } from "@/database/prisma";
-import { AppError } from "@/middlewares/errorHandler";
-import { StatusCodes } from "http-status-codes";
-import bcrypt from "bcryptjs";
-import { generateAccessToken, generateRefreshToken } from "@/shared/jwt";
+import { prisma } from '@/database/prisma';
+import { AppError } from '@/middlewares/errorHandler';
+import { StatusCodes } from 'http-status-codes';
+import bcrypt from 'bcryptjs';
+import { generateAccessToken, generateRefreshToken, verifyToken, TokenPayload } from '@/shared/jwt';
 
 export class UserService {
   async register(email: string, password: string, name: string) {
     const existing = await prisma.user.findUnique({ where: { email } });
-    if (existing)
-      throw new AppError("Email already registered", StatusCodes.CONFLICT);
+    if (existing) throw new AppError('Email already registered', StatusCodes.CONFLICT);
 
     const hashedPassword = await bcrypt.hash(password, 12);
     const user = await prisma.user.create({
@@ -20,26 +19,35 @@ export class UserService {
 
   async login(email: string, password: string) {
     const user = await prisma.user.findUnique({ where: { email } });
-    if (!user)
-      throw new AppError("Invalid credentials", StatusCodes.UNAUTHORIZED);
+    if (!user) throw new AppError('Invalid credentials', StatusCodes.UNAUTHORIZED);
 
     const isMatch = await bcrypt.compare(password, user.password);
-    if (!isMatch)
-      throw new AppError("Invalid credentials", StatusCodes.UNAUTHORIZED);
+    if (!isMatch) throw new AppError('Invalid credentials', StatusCodes.UNAUTHORIZED);
 
-    const payload = { userId: user.id, role: user.role };
+    const payload: TokenPayload = { userId: user.id, role: user.role };
     const accessToken = generateAccessToken(payload);
     const refreshToken = generateRefreshToken(payload);
 
     return {
-      user: {
-        id: user.id,
-        email: user.email,
-        name: user.name,
-        role: user.role,
-      },
+      user: { id: user.id, email: user.email, name: user.name, role: user.role },
       accessToken,
       refreshToken,
     };
+  }
+
+  async refreshAccessToken(token: string) {
+    try {
+      const decoded = verifyToken(token);
+      const user = await prisma.user.findUnique({ where: { id: decoded.userId } });
+      if (!user) throw new AppError('User not found', StatusCodes.UNAUTHORIZED);
+
+      const payload: TokenPayload = { userId: user.id, role: user.role };
+      const newAccessToken = generateAccessToken(payload);
+      const newRefreshToken = generateRefreshToken(payload);
+
+      return { accessToken: newAccessToken, refreshToken: newRefreshToken };
+    } catch (error) {
+      throw new AppError('Invalid or expired refresh token', StatusCodes.UNAUTHORIZED);
+    }
   }
 }
