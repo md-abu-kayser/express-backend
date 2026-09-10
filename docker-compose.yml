@@ -1,15 +1,17 @@
 version: '3.8'
+
 services:
   postgres:
     image: postgres:16-alpine
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: mydb
+      POSTGRES_DB: express_backend
     ports:
       - '5432:5432'
     volumes:
       - pgdata:/var/lib/postgresql/data
+
   app:
     build: .
     ports:
@@ -20,5 +22,6 @@ services:
       DATABASE_URL: postgresql://postgres:postgres@postgres:5432/express_backend
       JWT_SECRET: express-backend-super-secret-key-at-least-32-characters-long
       NODE_ENV: production
+
 volumes:
   pgdata:
